@@ -1,0 +1,252 @@
+version: 2
+
+models:
+  - name: int_job_postings_transformed
+    description: >
+      Cleaned job posting records with standardized text fields, typed salary
+      fields, boolean flags, posting timestamp, and stable keys for jobs,
+      companies, and locations. Grain: one row per raw job posting.
+    columns:
+      - name: raw_row_id
+        description: >
+          Original row identifier from the raw source. Tested not_null + unique
+          because the grain is one row per raw posting, so a repeated raw_row_id
+          would mean a duplicated source row.
+        tests:
+          - not_null
+          - unique
+      - name: job_id
+        description: >
+          Stable job key generated as md5(raw_row_id). Tested not_null + unique
+          because each raw posting maps to exactly one job_id; a duplicate would
+          indicate the hash collided or a source row was duplicated.
+        tests:
+          - not_null
+          - unique
+      - name: job_title_short
+        description: Cleaned short job title.
+      - name: job_title
+        description: Cleaned full job title.
+      - name: job_via
+        description: Cleaned posting channel or source platform.
+      - name: job_schedule_type
+        description: Cleaned work schedule type.
+      - name: company_name
+        description: >
+          Standardized company name. not_null because missing/blank names are
+          coalesced to "Unknown", so this should never be null.
+        tests:
+          - not_null
+      - name: company_id
+        description: >
+          Stable company key generated from the standardized company name.
+          not_null because it is always derivable (missing names hash to the
+          Unknown company key).
+        tests:
+          - not_null
+      - name: job_location
+        description: >
+          Standardized job location. not_null because missing values are
+          coalesced to "Unknown" upstream.
+        tests:
+          - not_null
+      - name: search_location
+        description: >
+          Standardized source search location. not_null because missing values
+          are coalesced to "Unknown".
+        tests:
+          - not_null
+      - name: job_country
+        description: >
+          Standardized job country. not_null because missing values are coalesced
+          to "Unknown".
+        tests:
+          - not_null
+      - name: location_id
+        description: >
+          Stable location key generated from job_location + job_country. not_null
+          because it is always derivable from the coalesced location fields.
+        tests:
+          - not_null
+      - name: is_work_from_home
+        description: Boolean flag indicating whether the role is remote.
+      - name: has_no_degree_mention
+        description: Boolean flag indicating the posting does not mention a degree requirement.
+      - name: has_health_insurance
+        description: Boolean flag indicating health insurance is mentioned.
+      - name: job_posted_at
+        description: Parsed timestamp when the job was posted.
+      - name: salary_rate
+        description: Cleaned salary rate grain, such as year or hour.
+      - name: salary_year_avg
+        description: Average yearly salary as a numeric value.
+      - name: salary_hour_avg
+        description: Average hourly salary as a numeric value.
+      - name: job_skills_raw
+        description: Raw skills list text retained for skill parsing.
+      - name: job_type_skills_raw
+        description: Raw skill category text retained for future parsing.
+
+  - name: int_job_postings_cleaned
+    description: >
+      Curated job posting interface used by downstream intermediate and mart
+      models. It exposes the cleaned posting columns from int_job_postings_transformed.
+      Grain: one row per raw job posting (same grain as int_job_postings_transformed).
+    columns:
+      - name: raw_row_id
+        description: >
+          Original row identifier from the raw source. not_null + unique enforces
+          that the posting grain is preserved through this passthrough model.
+        tests:
+          - not_null
+          - unique
+      - name: job_id
+        description: >
+          Stable job key used by fct_jobs and bridge_job_skills. not_null + unique
+          confirms one row per job before it is fanned out into skills downstream.
+        tests:
+          - not_null
+          - unique
+      - name: company_id
+        description: >
+          Foreign key candidate for the company dimension. not_null because every
+          posting resolves to a company (missing names default to the Unknown company).
+        tests:
+          - not_null
+      - name: location_id
+        description: >
+          Foreign key candidate for the location dimension. not_null because every
+          posting resolves to a location (missing values default to Unknown).
+        tests:
+          - not_null
+      - name: job_skills_raw
+        description: Raw skills list text used by int_job_skill_lists.
+
+  - name: int_companies
+    description: >
+      One row per standardized company, grouped from cleaned job postings for
+      the company dimension. Grain: one row per company_id.
+    columns:
+      - name: company_id
+        description: >
+          Stable company key. not_null + unique because the model is grouped to
+          one row per company_id, so this is the dimension's primary key.
+        tests:
+          - not_null
+          - unique
+      - name: company_name
+        description: >
+          Standardized company name. Tested not_null but NOT unique: missing
+          companies and a company literally named "Unknown" both resolve to
+          "Unknown" under distinct company_id values, so the display name is not
+          a valid key (company_id is).
+        tests:
+          - not_null
+
+  - name: int_locations
+    description: >
+      One row per standardized location, grouped from cleaned job postings for
+      the location dimension. Grain: one row per location_id (job_location + job_country).
+    columns:
+      - name: location_id
+        description: >
+          Stable location key built from job_location + job_country. not_null +
+          unique because the model is grouped to one row per location_id; this is
+          the dimension primary key. (search_location was removed from the grain
+          so that location_id stays unique.)
+        tests:
+          - not_null
+          - unique
+      - name: job_location
+        description: >
+          Standardized job location. not_null because it defaults to "Unknown"
+          upstream when missing, so it should never be null here.
+        tests:
+          - not_null
+      - name: job_country
+        description: >
+          Standardized job country. not_null because it defaults to "Unknown"
+          upstream when missing.
+        tests:
+          - not_null
+
+  - name: int_job_skill_lists
+    description: >
+      Jobs with non-empty raw skill lists, converted into comma-separated skill
+      text before exploding. Grain: one row per job that has skills (a filtered
+      subset of int_job_postings_cleaned, no row multiplication).
+    columns:
+      - name: job_id
+        description: >
+          Job key from int_job_postings_cleaned. not_null + unique because this is
+          just a filtered subset of the posting grain (one row per job with a
+          non-empty skills list) before the skill list is exploded.
+        tests:
+          - not_null
+          - unique
+      - name: skills_csv
+        description: >
+          Raw skills list cleaned into comma-separated text. not_null because the
+          model filters out postings whose raw skills list is null/empty.
+        tests:
+          - not_null
+
+  - name: int_job_skills_exploded
+    description: >
+      One row per job and parsed skill name after splitting the comma-separated
+      skill list. Grain: one row per occurrence, so duplicate (job_id, skill_name)
+      pairs are expected here and intentionally NOT tested for uniqueness.
+    columns:
+      - name: job_id
+        description: >
+          Job key from int_job_skill_lists. Only not_null (no unique): a job
+          appears once per skill, so job_id repeats by design.
+        tests:
+          - not_null
+      - name: skill_name
+        description: >
+          Lowercase, trimmed skill name. not_null because empty/blank skills are
+          coalesced to "unknown_skill" and blanks are filtered out upstream.
+        tests:
+          - not_null
+
+  - name: int_job_skills
+    description: >
+      Grouped job-to-skill pairs used to resolve the many-to-many relationship
+      between jobs and skills. Grain: one row per (job_id, skill_name) pair. The
+      model-level unique_combination_of_columns test guards against duplicate
+      job-skill edges while still allowing a job to have many skills (and a skill
+      to belong to many jobs), so neither column is unique on its own.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - job_id
+              - skill_name
+    columns:
+      - name: job_id
+        description: >
+          Job key from int_job_skills_exploded. not_null only; repeats once per
+          skill (uniqueness is enforced on the job_id + skill_name combination).
+        tests:
+          - not_null
+      - name: skill_name
+        description: >
+          Standardized skill name associated with the job. not_null only; repeats
+          across jobs (uniqueness is on the job_id + skill_name combination).
+        tests:
+          - not_null
+
+  - name: int_skills
+    description: >
+      One row per standardized skill, grouped from job-skill pairs for the skill
+      dimension. Grain: one row per skill_name.
+    columns:
+      - name: skill_name
+        description: >
+          Natural skill key and standardized skill name. not_null + unique because
+          the model is grouped to one row per distinct skill; this is the skill
+          dimension's primary key.
+        tests:
+          - not_null
+          - unique
