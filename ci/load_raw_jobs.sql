@@ -1,0 +1,85 @@
+create schema if not exists stg;
+
+drop table if exists stg.raw_jobs;
+
+create table stg.raw_jobs (
+    raw_row_id bigint primary key,
+    job_title_short text,
+    job_title text,
+    job_location text,
+    job_via text,
+    job_schedule_type text,
+    job_work_from_home text,
+    search_location text,
+    job_posted_date text,
+    job_no_degree_mention text,
+    job_health_insurance text,
+    job_country text,
+    salary_rate text,
+    salary_year_avg text,
+    salary_hour_avg text,
+    company_name text,
+    job_skills text,
+    job_type_skills text
+);
+
+insert into stg.raw_jobs (
+    raw_row_id,
+    job_title_short,
+    job_title,
+    job_location,
+    job_via,
+    job_schedule_type,
+    job_work_from_home,
+    search_location,
+    job_posted_date,
+    job_no_degree_mention,
+    job_health_insurance,
+    job_country,
+    salary_rate,
+    salary_year_avg,
+    salary_hour_avg,
+    company_name,
+    job_skills,
+    job_type_skills
+) values
+(
+    1,
+    'Data Analyst',
+    'Data Analyst',
+    'New York, NY',
+    'LinkedIn',
+    'Full-time',
+    'false',
+    'New York, NY',
+    '2024-01-15 09:00:00',
+    'true',
+    'true',
+    'United States',
+    'year',
+    '95000',
+    null,
+    'Acme Analytics',
+    '[''SQL'', ''Python'', ''Tableau'']',
+    '{"analyst":["SQL","Python","Tableau"]}'
+),
+(
+    2,
+    'Data Engineer',
+    'Senior Data Engineer',
+    'Remote',
+    'Indeed',
+    'Full-time',
+    'true',
+    'United States',
+    '2024-02-20 12:30:00',
+    'false',
+    'true',
+    'United States',
+    'year',
+    '135000',
+    null,
+    'DataWorks',
+    '[''Python'', ''dbt'', ''PostgreSQL'']',
+    '{"engineer":["Python","dbt","PostgreSQL"]}'
+);
