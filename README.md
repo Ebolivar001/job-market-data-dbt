@@ -20,11 +20,11 @@ dbt was chosen because it organizes transformations into dependency-aware models
 
 The raw source is one wide, denormalized row per posting where company, location, and skills repeat across rows and the skills column holds a repeating group (a list inside one field). The mart redesigns this into a normalized, dimensional model:
 
-- `fct_jobs` — one row per job posting (grain: `job_id`), with foreign keys to companies and locations.
-- `dim_companies` — one row per company.
-- `dim_locations` — one row per location/country.
-- `dim_skills` — one row per skill.
-- `bridge_job_skills` — connects jobs to skills, because one job can have many skills and one skill can belong to many jobs.
+- `fct_jobs`: one row per job posting (grain: `job_id`), with foreign keys to companies and locations.
+- `dim_companies` : one row per company.
+- `dim_locations` : one row per location/country.
+- `dim_skills` : one row per skill.
+- `bridge_job_skills` : connects jobs to skills, because one job can have many skills and one skill can belong to many jobs.
 
 This satisfies the goals of **3NF**:
 
@@ -43,9 +43,11 @@ The mart is built as a **star schema** to be ready to use for BI dashboards:
 
 ### Why Prefect for orchestration
 
-dbt only handles the transform step. The optional Prefect flow in `orchestration/dbt_pipeline.py` ties together the full pipeline — it runs the external ingestion script (which loads the raw data) and then runs `dbt deps`, `dbt run`, and `dbt test` in order. Prefect was chosen because it adds logging, retries, and scheduling around plain shell commands without forcing the dbt logic to move out of SQL.
+dbt only handles the transform step. The optional Prefect flow in `orchestration/dbt_pipeline.py` ties together the full pipeline, it runs the external ingestion script (which loads the raw data) and then runs `dbt deps`, `dbt run`, and `dbt test` in order. 
 
-### Why GitHub Actions for CI
+Prefect was chosen because it adds logging, retries, and scheduling around plain shell commands without forcing the dbt logic to move out of SQL.
+
+### GitHub Actions for CI
 
 A GitHub Actions workflow (`.github/workflows/dbt-ci.yml`) runs the same dbt commands used locally against a throwaway PostgreSQL service, loading a small fixture from `ci/load_raw_jobs.sql`. This guarantees the models build and all tests pass before changes are merged.
 
