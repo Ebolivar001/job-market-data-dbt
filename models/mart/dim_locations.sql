@@ -3,10 +3,10 @@
     schema='marts'
 ) }}
 
-select distinct
+select
     location_id,
     job_location,
     search_location,
     job_country
 
-from {{ ref('int_job_postings_cleaned') }}
+from {{ ref('int_locations') }}

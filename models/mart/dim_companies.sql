@@ -3,8 +3,8 @@
     schema='marts'
 ) }}
 
-select distinct
+select
     company_id,
     company_name
 
-from {{ ref('int_job_postings_cleaned') }}
+from {{ ref('int_companies') }}

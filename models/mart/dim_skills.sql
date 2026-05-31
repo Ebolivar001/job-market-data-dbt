@@ -3,7 +3,7 @@
     schema='marts'
 ) }}
 
-select distinct
+select
     skill_name
 
-from {{ ref('int_job_skills') }}
+from {{ ref('int_skills') }}
