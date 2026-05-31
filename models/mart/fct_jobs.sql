@@ -1,7 +1,7 @@
 {{ config(
     materialized='table',
     alias='fct_jobs',
-    schema='marts'
+    schema='mart'
 ) }}
 
 select

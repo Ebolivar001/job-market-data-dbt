@@ -8,13 +8,11 @@ create table if not exists mart.dim_companies (
 create table if not exists mart.dim_locations (
     location_id text primary key,
     job_location text,
-    search_location text,
     job_country text
 );
 
 create table if not exists mart.dim_skills (
-    skill_id text primary key,
-    skill_name text not null unique
+    skill_name text primary key
 );
 
 create table if not exists mart.fct_jobs (
@@ -36,8 +34,7 @@ create table if not exists mart.fct_jobs (
 );
 
 create table if not exists mart.bridge_job_skills (
-    job_skill_id text primary key,
     job_id text not null references mart.fct_jobs (job_id),
-    skill_id text not null references mart.dim_skills (skill_id),
-    unique (job_id, skill_id)
+    skill_name text not null references mart.dim_skills (skill_name),
+    primary key (job_id, skill_name)
 );

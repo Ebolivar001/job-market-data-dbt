@@ -1,7 +1,7 @@
 {{ config(
     materialized='table',
     alias='dim_locations',
-    schema='marts'
+    schema='mart'
 ) }}
 
 select
