@@ -1,0 +1,122 @@
+version: 2
+
+models:
+  - name: dim_companies
+    description: >
+      Company dimension with one row per standardized company. Jobs connect to
+      this table through company_id.
+    columns:
+      - name: company_id
+        description: Primary key for the company dimension.
+        tests:
+          - not_null
+          - unique
+      - name: company_name
+        description: Standardized company name.
+        tests:
+          - not_null
+          - unique
+
+  - name: dim_locations
+    description: >
+      Location dimension with one row per standardized job location and country.
+      Jobs connect to this table through location_id.
+    columns:
+      - name: location_id
+        description: Primary key for the location dimension.
+        tests:
+          - not_null
+          - unique
+      - name: job_location
+        description: Standardized job location from the posting.
+      - name: search_location
+        description: Standardized location used by the source search.
+      - name: job_country
+        description: Standardized country for the job posting.
+
+  - name: dim_skills
+    description: >
+      Skill dimension with one row per standardized skill. skill_name is the
+      natural key used by the job-skill bridge.
+    columns:
+      - name: skill_name
+        description: Primary key and standardized skill name.
+        tests:
+          - not_null
+          - unique
+
+  - name: fct_jobs
+    description: >
+      Job fact table with one row per job posting and foreign keys to companies
+      and locations. Skills are connected through bridge_job_skills.
+    columns:
+      - name: job_id
+        description: Primary key for the job table.
+        tests:
+          - not_null
+          - unique
+      - name: raw_row_id
+        description: Original raw row identifier.
+        tests:
+          - not_null
+          - unique
+      - name: company_id
+        description: Foreign key to dim_companies.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_companies')
+                field: company_id
+      - name: location_id
+        description: Foreign key to dim_locations.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_locations')
+                field: location_id
+      - name: job_title_short
+        description: Standardized short job title.
+      - name: job_title
+        description: Full job title.
+      - name: job_via
+        description: Source platform or posting channel.
+      - name: job_schedule_type
+        description: Work schedule type, such as full-time or part-time.
+      - name: is_work_from_home
+        description: Boolean flag indicating whether the role is remote.
+      - name: job_posted_at
+        description: Timestamp when the job was posted.
+      - name: has_no_degree_mention
+        description: Boolean flag indicating no degree is mentioned.
+      - name: has_health_insurance
+        description: Boolean flag indicating health insurance is mentioned.
+      - name: salary_rate
+        description: Salary rate grain, such as year or hour.
+      - name: salary_year_avg
+        description: Average yearly salary.
+      - name: salary_hour_avg
+        description: Average hourly salary.
+
+  - name: bridge_job_skills
+    description: >
+      Bridge table resolving the many-to-many relationship between jobs and
+      skills. Each row connects one job_id to one skill_name.
+    columns:
+      - name: job_id
+        description: Foreign key to fct_jobs.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fct_jobs')
+                field: job_id
+      - name: skill_name
+        description: Foreign key to dim_skills.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_skills')
+                field: skill_name
