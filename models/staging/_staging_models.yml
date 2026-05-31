@@ -8,18 +8,37 @@ models:
       columns that will feed normalized 3NF models.
     columns:
       - name: raw_row_id
-        description: Unique row identifier from the raw source.
+        description: >
+          Unique row identifier from the raw source. not_null + unique because it
+          is the primary key of the staging grain (one row per raw posting) and
+          everything downstream derives job_id from it.
         tests:
           - not_null
           - unique
       - name: job_title_short
-        description: Short normalized title label from the source.
+        description: >
+          Short normalized title label from the source. not_null (error) because
+          the source always populates it; a null would signal a broken load.
+        tests:
+          - not_null
       - name: job_title
-        description: Full job title.
+        description: >
+          Full job title. not_null at warn severity: it is almost always present,
+          so a null is a data-quality signal to investigate, not a pipeline stopper.
+        tests:
+          - not_null:
+              config:
+                severity: warn
       - name: job_location
         description: Raw location text from the job posting.
       - name: job_via
-        description: Source platform or posting channel.
+        description: >
+          Source platform or posting channel. not_null at warn severity: usually
+          present, occasional nulls are tolerated but flagged.
+        tests:
+          - not_null:
+              config:
+                severity: warn
       - name: job_schedule_type
         description: Work schedule type, such as full-time or part-time.
       - name: is_work_from_home
@@ -27,21 +46,46 @@ models:
       - name: search_location
         description: Location used in the original search.
       - name: job_posted_date
-        description: Raw date or timestamp when the job was posted.
+        description: >
+          Raw date or timestamp when the job was posted. not_null (error) because
+          the source always provides a posting date.
+        tests:
+          - not_null
       - name: has_no_degree_mention
         description: Boolean flag indicating no degree is mentioned.
       - name: has_health_insurance
         description: Boolean flag indicating health insurance is mentioned.
       - name: job_country
-        description: Country associated with the job posting.
+        description: >
+          Country associated with the job posting. not_null at warn severity:
+          mostly populated, nulls are flagged for review.
+        tests:
+          - not_null:
+              config:
+                severity: warn
       - name: salary_rate
-        description: Salary rate grain, such as year or hour.
+        description: >
+          Salary rate grain. accepted_values (warn) guards against unexpected new
+          rate types; blanks/nulls are allowed since most postings have no salary.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["year", "hour", "month", "week", "day"]
+              config:
+                severity: warn
       - name: salary_year_avg
         description: Average yearly salary as a numeric value.
       - name: salary_hour_avg
         description: Average hourly salary as a numeric value.
       - name: company_name
-        description: Raw company name before company dimension normalization.
+        description: >
+          Raw company name before company dimension normalization. not_null at
+          warn severity: nearly always present, nulls flagged (they default to
+          the Unknown company downstream).
+        tests:
+          - not_null:
+              config:
+                severity: warn
       - name: job_skills_raw
         description: Raw skills list text to be exploded into skills and job_skills models.
       - name: job_type_skills_raw
