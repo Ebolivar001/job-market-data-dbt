@@ -4,8 +4,15 @@
     schema='intermediate'
 ) }}
 
-select distinct
+
+with int_job_skills_exploded as (
+    select * 
+    from {{ ref('int_job_skills_exploded') }}
+)
+select
 job_id
 , skill_name
 
-from {{ ref('int_job_skills_exploded') }}
+from int_job_skills_exploded
+group by
+job_id, skill_name

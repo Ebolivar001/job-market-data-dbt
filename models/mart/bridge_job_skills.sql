@@ -3,7 +3,7 @@
     schema='marts'
 ) }}
 
-select distinct
+select
     job_id,
     skill_name
 
