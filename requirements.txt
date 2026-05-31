@@ -1,2 +1,12 @@
+# dbt transforms the raw job postings after ingestion loads them into Postgres.
 dbt-core==1.11.11
 dbt-postgres==1.9.1
+
+# Prefect orchestrates the external ingestion script and the dbt commands.
+prefect>=3.0
+
+# The Prefect flow runs the ingestion repo script from this project's venv,
+# so these dependencies must be available here too.
+pandas
+psycopg[binary]
+python-dotenv
