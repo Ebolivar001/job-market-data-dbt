@@ -1,0 +1,90 @@
+version: 2
+
+models:
+  - name: int_job_postings_transformed
+    description: >
+      Transformed intermediate job posting records with standardized entity keys for
+      jobs, companies, and locations.
+    columns:
+      - name: raw_row_id
+        description: Original raw row identifier.
+        tests:
+          - not_null
+          - unique
+      - name: job_id
+        description: Stable job entity key generated from raw_row_id.
+        tests:
+          - not_null
+          - unique
+      - name: company_id
+        description: Stable company key generated from standardized company_name.
+        tests:
+          - not_null
+      - name: location_id
+        description: Stable location key generated from standardized location fields.
+        tests:
+          - not_null
+
+  - name: int_job_postings_cleaned
+    description: >
+      Compatibility model exposing transformed job posting records to downstream
+      marts.
+    columns:
+      - name: raw_row_id
+        description: Original raw row identifier.
+        tests:
+          - not_null
+          - unique
+      - name: job_id
+        description: Stable job entity key generated from raw_row_id.
+        tests:
+          - not_null
+          - unique
+      - name: company_id
+        description: Stable company key generated from standardized company_name.
+        tests:
+          - not_null
+      - name: location_id
+        description: Stable location key generated from standardized location fields.
+        tests:
+          - not_null
+
+  - name: int_job_skill_lists
+    description: >
+      Job records with non-empty skill lists prepared by the staging model.
+    columns:
+      - name: job_id
+        description: Job key from int_job_postings_cleaned.
+        tests:
+          - not_null
+      - name: skills_csv
+        description: Skills list cleaned into comma-separated text.
+        tests:
+          - not_null
+
+  - name: int_job_skills_exploded
+    description: >
+      One row per job and parsed skill name before final deduplication.
+    columns:
+      - name: job_id
+        description: Job key from int_job_postings_cleaned.
+        tests:
+          - not_null
+      - name: skill_name
+        description: Standardized skill name parsed from the raw skills list.
+        tests:
+          - not_null
+
+  - name: int_job_skills
+    description: >
+      Exploded job-to-skill records used to resolve the many-to-many
+      relationship between jobs and skills.
+    columns:
+      - name: job_id
+        description: Job key from int_job_postings_cleaned.
+        tests:
+          - not_null
+      - name: skill_name
+        description: Standardized skill name parsed from the raw skills list.
+        tests:
+          - not_null
