@@ -12,10 +12,9 @@ with int_job_postings_cleaned as (
 select
 location_id
 , job_location
-, search_location
 , job_country
 
 from int_job_postings_cleaned
 
 group by
-location_id, job_location, search_location, job_country
+location_id, job_location, job_country

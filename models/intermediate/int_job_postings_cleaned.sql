@@ -25,6 +25,5 @@ raw_row_id
 , salary_year_avg
 , salary_hour_avg
 , job_skills_raw
-, skills_csv
 , job_type_skills_raw
 from {{ ref('int_job_postings_transformed') }}

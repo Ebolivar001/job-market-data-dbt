@@ -6,7 +6,6 @@
 select
     location_id,
     job_location,
-    search_location,
     job_country
 
 from {{ ref('int_locations') }}

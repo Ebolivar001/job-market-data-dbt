@@ -36,14 +36,12 @@ raw_row_id::bigint as raw_row_id
     when lower(trim(has_health_insurance::text)) in ('false', 'f', 'no', 'n', '0') then false
   end as has_health_insurance
 , case
-    case
     when job_posted_date::text ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' then job_posted_date::timestamp
   end as job_posted_at
 , nullif(trim(salary_rate::text), '') as salary_rate
 , nullif(regexp_replace(salary_year_avg::text, '[^0-9.-]', '', 'g'), '')::numeric as salary_year_avg
 , nullif(regexp_replace(salary_hour_avg::text, '[^0-9.-]', '', 'g'), '')::numeric as salary_hour_avg
 , nullif(trim(job_skills_raw::text), '') as job_skills_raw
-, nullif(trim(skills_csv::text), '') as skills_csv
 , nullif(trim(job_type_skills_raw::text), '') as job_type_skills_raw
 
 from stg_job_postings

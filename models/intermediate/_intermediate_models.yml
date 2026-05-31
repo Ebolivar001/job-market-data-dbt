@@ -3,88 +3,170 @@ version: 2
 models:
   - name: int_job_postings_transformed
     description: >
-      Transformed intermediate job posting records with standardized entity keys for
-      jobs, companies, and locations.
+      Cleaned job posting records with standardized text fields, typed salary
+      fields, boolean flags, posting timestamp, and stable keys for jobs,
+      companies, and locations.
     columns:
       - name: raw_row_id
-        description: Original raw row identifier.
+        description: Original row identifier from the raw source.
         tests:
           - not_null
           - unique
       - name: job_id
-        description: Stable job entity key generated from raw_row_id.
+        description: Stable job key generated from raw_row_id.
         tests:
           - not_null
           - unique
-      - name: company_id
-        description: Stable company key generated from standardized company_name.
+      - name: job_title_short
+        description: Cleaned short job title.
+      - name: job_title
+        description: Cleaned full job title.
+      - name: job_via
+        description: Cleaned posting channel or source platform.
+      - name: job_schedule_type
+        description: Cleaned work schedule type.
+      - name: company_name
+        description: Standardized company name, defaulting to Unknown when missing.
         tests:
           - not_null
+      - name: company_id
+        description: Stable company key generated from the standardized company name.
+        tests:
+          - not_null
+      - name: job_location
+        description: Standardized job location, defaulting to Unknown when missing.
+      - name: search_location
+        description: Standardized source search location.
+      - name: job_country
+        description: Standardized job country, defaulting to Unknown when missing.
       - name: location_id
         description: Stable location key generated from standardized location fields.
         tests:
           - not_null
+      - name: is_work_from_home
+        description: Boolean flag indicating whether the role is remote.
+      - name: has_no_degree_mention
+        description: Boolean flag indicating the posting does not mention a degree requirement.
+      - name: has_health_insurance
+        description: Boolean flag indicating health insurance is mentioned.
+      - name: job_posted_at
+        description: Parsed timestamp when the job was posted.
+      - name: salary_rate
+        description: Cleaned salary rate grain, such as year or hour.
+      - name: salary_year_avg
+        description: Average yearly salary as a numeric value.
+      - name: salary_hour_avg
+        description: Average hourly salary as a numeric value.
+      - name: job_skills_raw
+        description: Raw skills list text retained for skill parsing.
+      - name: job_type_skills_raw
+        description: Raw skill category text retained for future parsing.
 
   - name: int_job_postings_cleaned
     description: >
-      Compatibility model exposing transformed job posting records to downstream
-      marts.
+      Curated job posting interface used by downstream intermediate and mart
+      models. It exposes the cleaned posting columns from int_job_postings_transformed.
     columns:
       - name: raw_row_id
-        description: Original raw row identifier.
+        description: Original row identifier from the raw source.
         tests:
           - not_null
           - unique
       - name: job_id
-        description: Stable job entity key generated from raw_row_id.
+        description: Stable job key used by fct_jobs and bridge_job_skills.
         tests:
           - not_null
           - unique
       - name: company_id
-        description: Stable company key generated from standardized company_name.
+        description: Foreign key candidate for the company dimension.
         tests:
           - not_null
       - name: location_id
-        description: Stable location key generated from standardized location fields.
+        description: Foreign key candidate for the location dimension.
+        tests:
+          - not_null
+      - name: job_skills_raw
+        description: Raw skills list text used by int_job_skill_lists.
+
+  - name: int_companies
+    description: >
+      One row per standardized company, grouped from cleaned job postings for
+      the company dimension.
+    columns:
+      - name: company_id
+        description: Stable company key.
+        tests:
+          - not_null
+          - unique
+      - name: company_name
+        description: Standardized company name. Not unique because missing companies and a company literally named "Unknown" both resolve to "Unknown" under distinct company_id values.
         tests:
           - not_null
 
+  - name: int_locations
+    description: >
+      One row per standardized location, grouped from cleaned job postings for
+      the location dimension.
+    columns:
+      - name: location_id
+        description: Stable location key.
+        tests:
+          - not_null
+          - unique
+      - name: job_location
+        description: Standardized job location.
+      - name: job_country
+        description: Standardized job country.
+
   - name: int_job_skill_lists
     description: >
-      Job records with non-empty skill lists prepared by the staging model.
+      Jobs with non-empty raw skill lists, converted into comma-separated skill
+      text before exploding.
     columns:
       - name: job_id
         description: Job key from int_job_postings_cleaned.
         tests:
           - not_null
       - name: skills_csv
-        description: Skills list cleaned into comma-separated text.
+        description: Raw skills list cleaned into comma-separated text.
         tests:
           - not_null
 
   - name: int_job_skills_exploded
     description: >
-      One row per job and parsed skill name before final deduplication.
+      One row per job and parsed skill name after splitting the comma-separated
+      skill list.
     columns:
       - name: job_id
-        description: Job key from int_job_postings_cleaned.
+        description: Job key from int_job_skill_lists.
         tests:
           - not_null
       - name: skill_name
-        description: Standardized skill name parsed from the raw skills list.
+        description: Lowercase, trimmed skill name.
         tests:
           - not_null
 
   - name: int_job_skills
     description: >
-      Exploded job-to-skill records used to resolve the many-to-many
-      relationship between jobs and skills.
+      Grouped job-to-skill pairs used to resolve the many-to-many relationship
+      between jobs and skills.
     columns:
       - name: job_id
-        description: Job key from int_job_postings_cleaned.
+        description: Job key from int_job_skills_exploded.
         tests:
           - not_null
       - name: skill_name
-        description: Standardized skill name parsed from the raw skills list.
+        description: Standardized skill name associated with the job.
         tests:
           - not_null
+
+  - name: int_skills
+    description: >
+      One row per standardized skill, grouped from job-skill pairs for the skill
+      dimension.
+    columns:
+      - name: skill_name
+        description: Natural skill key and standardized skill name.
+        tests:
+          - not_null
+          - unique

@@ -3,11 +3,11 @@ version: 2
 sources:
   - name: raw
     description: Raw job posting data loaded before dbt transformations.
-    schema: "{{ env_var('DBT_RAW_SCHEMA', 'public') }}"
+    schema: "{{ env_var('DBT_RAW_SCHEMA', 'stg') }}"
     tables:
       - name: job_postings_raw
         description: One row per raw job posting from the ingestion source.
-        identifier: "{{ env_var('DBT_RAW_JOB_POSTINGS_TABLE', 'job_postings_raw') }}"
+        identifier: "{{ env_var('DBT_RAW_JOB_POSTINGS_TABLE', 'raw_jobs') }}"
         columns:
           - name: raw_row_id
             description: Unique row identifier from the raw source.

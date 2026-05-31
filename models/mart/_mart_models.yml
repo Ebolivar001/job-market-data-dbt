@@ -12,10 +12,9 @@ models:
           - not_null
           - unique
       - name: company_name
-        description: Standardized company name.
+        description: Standardized company name. Not unique because missing companies and a company literally named "Unknown" both resolve to "Unknown" under distinct company_id values.
         tests:
           - not_null
-          - unique
 
   - name: dim_locations
     description: >
@@ -29,8 +28,6 @@ models:
           - unique
       - name: job_location
         description: Standardized job location from the posting.
-      - name: search_location
-        description: Standardized location used by the source search.
       - name: job_country
         description: Standardized country for the job posting.
 
