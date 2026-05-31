@@ -1,0 +1,7 @@
+.venv/
+.env
+
+# dbt generated artifacts
+target/
+dbt_packages/
+logs/
