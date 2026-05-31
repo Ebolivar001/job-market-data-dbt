@@ -4,40 +4,59 @@ models:
   - name: dim_companies
     description: >
       Company dimension with one row per standardized company. Jobs connect to
-      this table through company_id.
+      this table through company_id. Grain: one row per company_id.
     columns:
       - name: company_id
-        description: Primary key for the company dimension.
+        description: >
+          Primary key for the company dimension. not_null + unique enforces the
+          one-row-per-company grain so fct_jobs.company_id joins resolve to a
+          single company.
         tests:
           - not_null
           - unique
       - name: company_name
-        description: Standardized company name. Not unique because missing companies and a company literally named "Unknown" both resolve to "Unknown" under distinct company_id values.
+        description: >
+          Standardized company name. Tested not_null but NOT unique: missing
+          companies and a company literally named "Unknown" both resolve to
+          "Unknown" under distinct company_id values, so the name is not a key.
         tests:
           - not_null
 
   - name: dim_locations
     description: >
       Location dimension with one row per standardized job location and country.
-      Jobs connect to this table through location_id.
+      Jobs connect to this table through location_id. Grain: one row per location_id.
     columns:
       - name: location_id
-        description: Primary key for the location dimension.
+        description: >
+          Primary key for the location dimension. not_null + unique enforces the
+          one-row-per-location grain so fct_jobs.location_id joins resolve to a
+          single location.
         tests:
           - not_null
           - unique
       - name: job_location
-        description: Standardized job location from the posting.
+        description: >
+          Standardized job location from the posting. not_null because it defaults
+          to "Unknown" upstream when missing.
+        tests:
+          - not_null
       - name: job_country
-        description: Standardized country for the job posting.
+        description: >
+          Standardized country for the job posting. not_null because it defaults
+          to "Unknown" upstream when missing.
+        tests:
+          - not_null
 
   - name: dim_skills
     description: >
       Skill dimension with one row per standardized skill. skill_name is the
-      natural key used by the job-skill bridge.
+      natural key used by the job-skill bridge. Grain: one row per skill_name.
     columns:
       - name: skill_name
-        description: Primary key and standardized skill name.
+        description: >
+          Primary key and standardized skill name. not_null + unique enforces one
+          row per skill so the bridge's skill_name foreign key resolves uniquely.
         tests:
           - not_null
           - unique
@@ -45,20 +64,28 @@ models:
   - name: fct_jobs
     description: >
       Job fact table with one row per job posting and foreign keys to companies
-      and locations. Skills are connected through bridge_job_skills.
+      and locations. Skills are connected through bridge_job_skills. Grain: one
+      row per job posting (job_id).
     columns:
       - name: job_id
-        description: Primary key for the job table.
+        description: >
+          Primary key for the job table. not_null + unique enforces one row per
+          job posting (a duplicate would double-count a job).
         tests:
           - not_null
           - unique
       - name: raw_row_id
-        description: Original raw row identifier.
+        description: >
+          Original raw row identifier. not_null + unique confirms traceability
+          back to exactly one source row.
         tests:
           - not_null
           - unique
       - name: company_id
-        description: Foreign key to dim_companies.
+        description: >
+          Foreign key to dim_companies. not_null because every job has a company
+          (Unknown when missing); relationships test guards against orphan keys
+          that do not exist in dim_companies.
         tests:
           - not_null
           - relationships:
@@ -66,7 +93,10 @@ models:
                 to: ref('dim_companies')
                 field: company_id
       - name: location_id
-        description: Foreign key to dim_locations.
+        description: >
+          Foreign key to dim_locations. not_null because every job has a location
+          (Unknown when missing); relationships test guards against orphan keys
+          that do not exist in dim_locations.
         tests:
           - not_null
           - relationships:
@@ -99,10 +129,23 @@ models:
   - name: bridge_job_skills
     description: >
       Bridge table resolving the many-to-many relationship between jobs and
-      skills. Each row connects one job_id to one skill_name.
+      skills. Each row connects one job_id to one skill_name. Grain: one row per
+      (job_id, skill_name). The model-level unique_combination_of_columns test
+      prevents duplicate job-skill edges (which would over-count skills per job)
+      while still allowing each job to have many skills and each skill to belong
+      to many jobs, so neither column is unique on its own.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - job_id
+              - skill_name
     columns:
       - name: job_id
-        description: Foreign key to fct_jobs.
+        description: >
+          Foreign key to fct_jobs. not_null only (repeats once per skill);
+          relationships test guards against edges pointing to jobs that do not
+          exist in fct_jobs.
         tests:
           - not_null
           - relationships:
@@ -110,7 +153,10 @@ models:
                 to: ref('fct_jobs')
                 field: job_id
       - name: skill_name
-        description: Foreign key to dim_skills.
+        description: >
+          Foreign key to dim_skills. not_null only (repeats across jobs);
+          relationships test guards against edges pointing to skills that do not
+          exist in dim_skills.
         tests:
           - not_null
           - relationships:
