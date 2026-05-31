@@ -1,5 +1,6 @@
 {{ config(
     materialized='table',
+    alias='bridge_job_skills',
     schema='marts'
 ) }}
 

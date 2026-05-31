@@ -1,5 +1,6 @@
 {{ config(
     materialized='table',
+    alias='dim_skills',
     schema='marts'
 ) }}
 
