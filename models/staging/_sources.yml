@@ -1,0 +1,33 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Raw job posting data loaded before dbt transformations.
+    schema: "{{ env_var('DBT_RAW_SCHEMA', 'public') }}"
+    tables:
+      - name: job_postings_raw
+        description: One row per raw job posting from the ingestion source.
+        identifier: "{{ env_var('DBT_RAW_JOB_POSTINGS_TABLE', 'job_postings_raw') }}"
+        columns:
+          - name: raw_row_id
+            description: Unique row identifier from the raw source.
+            tests:
+              - not_null
+              - unique
+          - name: job_title_short
+          - name: job_title
+          - name: job_location
+          - name: job_via
+          - name: job_schedule_type
+          - name: job_work_from_home
+          - name: search_location
+          - name: job_posted_date
+          - name: job_no_degree_mention
+          - name: job_health_insurance
+          - name: job_country
+          - name: salary_rate
+          - name: salary_year_avg
+          - name: salary_hour_avg
+          - name: company_name
+          - name: job_skills
+          - name: job_type_skills

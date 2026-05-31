@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: stg_job_postings
+    description: >
+      Thin staging model for raw job postings. This keeps one row per raw
+      posting, references the dbt source, and applies only light aliases for
+      columns that will feed normalized 3NF models.
+    columns:
+      - name: raw_row_id
+        description: Unique row identifier from the raw source.
+        tests:
+          - not_null
+          - unique
+      - name: job_title_short
+        description: Short normalized title label from the source.
+      - name: job_title
+        description: Full job title.
+      - name: job_location
+        description: Raw location text from the job posting.
+      - name: job_via
+        description: Source platform or posting channel.
+      - name: job_schedule_type
+        description: Work schedule type, such as full-time or part-time.
+      - name: is_work_from_home
+        description: Boolean flag indicating whether the role is remote.
+      - name: search_location
+        description: Location used in the original search.
+      - name: job_posted_date
+        description: Raw date or timestamp when the job was posted.
+      - name: has_no_degree_mention
+        description: Boolean flag indicating no degree is mentioned.
+      - name: has_health_insurance
+        description: Boolean flag indicating health insurance is mentioned.
+      - name: job_country
+        description: Country associated with the job posting.
+      - name: salary_rate
+        description: Salary rate grain, such as year or hour.
+      - name: salary_year_avg
+        description: Average yearly salary as a numeric value.
+      - name: salary_hour_avg
+        description: Average hourly salary as a numeric value.
+      - name: company_name
+        description: Raw company name before company dimension normalization.
+      - name: job_skills_raw
+        description: Raw skills list text to be exploded into skills and job_skills models.
+      - name: job_type_skills_raw
+        description: Raw skill categories text to be parsed during normalization.
